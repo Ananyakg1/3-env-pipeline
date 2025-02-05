@@ -1,0 +1,40 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Terraform Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, qa, prod]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_AD_SECRETS }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ matrix.environment }}
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=terraform.tfvars
+        working-directory: ${{ matrix.environment }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var-file=terraform.tfvars
+        working-directory: ${{ matrix.environment }}
