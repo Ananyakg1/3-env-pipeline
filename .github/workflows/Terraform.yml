@@ -1,87 +1,58 @@
 # This is a basic workflow to help you get started with Actions
 
-name: 'Terraform'
+name: Terraform Deployment
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-
-permissions:
-  contents: read
+    branches:
+      - main  # Trigger on push to main branch
 
 jobs:
   terraform:
-    name: 'Terraform'
     runs-on: ubuntu-latest
-    environment: production
 
-    defaults:
-      run:
-        shell: bash
+    strategy:
+      matrix:
+        environment: [dev, qa, prod]  # Sequential execution of dev, qa, and prod environments
 
     steps:
-    # Step 1: Checkout the repository
-    - name: Checkout the repository
-      uses: actions/checkout@v4
+      # Step 1: Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # Step 2: Check Azure CLI Version
-    - name: Check Azure CLI Version
-      run: |
-        az --version
+      # Step 2: Azure Login using Service Principal Credentials from GitHub Secrets
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          subscription-id: ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}  # Added subscription-id
 
-    # Step 3: Log in to Azure using Service Principal
-    - name: Log in to Azure
-      run: |
-        az login --service-principal \
-          -u ${{ secrets.AZURE_CLIENT_ID }} \
-          -p ${{ secrets.AZURE_CLIENT_SECRET }} \
-          --tenant ${{ secrets.AZURE_TENANT_ID }}
-        az account set --subscription ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}
+      # Step 3: Set up Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
 
-    # Step 4: Debug Azure Login Status
-    - name: Verify Azure Login
-      run: |
-        az account show
+      # Step 4: Terraform Init
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ matrix.environment }}
 
-    # Step 5: Set up Terraform
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v1
-      with:
-        terraform_version: 1.0.0
+      # Step 5: Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ${{ matrix.environment }}
 
-    # Step 6: Terraform Init for dev
-    - name: Terraform Init - dev
-      run: terraform init -backend-config="environment=dev"
+      # Step 6: Terraform Plan
+      - name: Terraform Plan
+        run: terraform plan -var-file=terraform.tfvars
+        working-directory: ${{ matrix.environment }}
 
-    # Step 7: Terraform Plan for dev
-    - name: Terraform Plan - dev
-      run: terraform plan -out=tfplan-dev.binary -var="environment=dev"
+      # Step 7: Terraform Apply (Only for QA and PROD)
+      - name: Terraform Apply (Only for QA and PROD)
+        if: matrix.environment != 'dev'
+        run: terraform apply -auto-approve -var-file=terraform.tfvars
+        working-directory: ${{ matrix.environment }}
 
-    # Step 8: Terraform Apply for dev
-    - name: Terraform Apply - dev
-      run: terraform apply -auto-approve -input=false tfplan-dev.binary
-
-    # Step 9: Terraform Init for qa
-    - name: Terraform Init - qa
-      run: terraform init -backend-config="environment=qa"
-
-    # Step 10: Terraform Plan for qa
-    - name: Terraform Plan - qa
-      run: terraform plan -out=tfplan-qa.binary -var="environment=qa"
-
-    # Step 11: Terraform Apply for qa
-    - name: Terraform Apply - qa
-      run: terraform apply -auto-approve -input=false tfplan-qa.binary
-
-    # Step 12: Terraform Init for prod
-    - name: Terraform Init - prod
-      run: terraform init -backend-config="environment=prod"
-
-    # Step 13: Terraform Plan for prod
-    - name: Terraform Plan - prod
-      run: terraform plan -out=tfplan-prod.binary -var="environment=prod"
-
-    # Step 14: Terraform Apply for prod
-    - name: Terraform Apply - prod
-      run: terraform apply -auto-approve -input=false tfplan-prod.binary
