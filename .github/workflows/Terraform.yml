@@ -2,8 +2,8 @@
 
 name: Terraform Deployment
 
-on: 
-  push: 
+on:
+  push:
     branches:
       - main
 
@@ -13,9 +13,13 @@ jobs:
     strategy:
       matrix:
         environment: [dev, qa, prod]
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Create Environment Directories
+        run: mkdir -p ${{ matrix.environment }}
 
       - name: Azure Login
         uses: azure/login@v1
@@ -32,10 +36,15 @@ jobs:
         run: terraform init
         working-directory: ${{ matrix.environment }}
 
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ${{ matrix.environment }}
+
       - name: Terraform Plan
         run: terraform plan -var-file=terraform.tfvars
         working-directory: ${{ matrix.environment }}
 
-      - name: Terraform Apply
+      - name: Terraform Apply (Only for QA and PROD)
+        if: matrix.environment != 'dev'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
         working-directory: ${{ matrix.environment }}
