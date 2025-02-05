@@ -8,7 +8,7 @@ on:
       - main
 
 permissions:
-  id-token: write  # Allow the workflow to request an ID token
+  id-token: write  # Required to allow OIDC login to Azure
 
 jobs:
   terraform_dev:
@@ -34,16 +34,8 @@ jobs:
         run: terraform init
         working-directory: ./dev
 
-      - name: Terraform Validate (Dev)
-        run: terraform validate
-        working-directory: ./dev
-
-      - name: Terraform Plan (Dev)
-        run: terraform plan -var-file=dev/terraform.tfvars
-        working-directory: ./dev
-
       - name: Terraform Apply (Dev)
-        run: terraform apply -auto-approve -var-file=dev/terraform.tfvars
+        run: terraform apply -auto-approve
         working-directory: ./dev
 
   terraform_qa:
@@ -70,16 +62,8 @@ jobs:
         run: terraform init
         working-directory: ./qa
 
-      - name: Terraform Validate (QA)
-        run: terraform validate
-        working-directory: ./qa
-
-      - name: Terraform Plan (QA)
-        run: terraform plan -var-file=qa/terraform.tfvars
-        working-directory: ./qa
-
       - name: Terraform Apply (QA)
-        run: terraform apply -auto-approve -var-file=qa/terraform.tfvars
+        run: terraform apply -auto-approve
         working-directory: ./qa
 
   terraform_prod:
@@ -106,14 +90,6 @@ jobs:
         run: terraform init
         working-directory: ./prod
 
-      - name: Terraform Validate (Prod)
-        run: terraform validate
-        working-directory: ./prod
-
-      - name: Terraform Plan (Prod)
-        run: terraform plan -var-file=prod/terraform.tfvars
-        working-directory: ./prod
-
       - name: Terraform Apply (Prod)
-        run: terraform apply -auto-approve -var-file=prod/terraform.tfvars
+        run: terraform apply -auto-approve
         working-directory: ./prod
