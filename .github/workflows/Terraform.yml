@@ -5,7 +5,7 @@ name: Terraform Deployment
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
+      - main  # Trigger the workflow on push to the main branch
 
 jobs:
   terraform:
@@ -13,10 +13,10 @@ jobs:
 
     strategy:
       matrix:
-        environment: [dev, qa, prod]  # Sequential execution of dev, qa, and prod environments
+        environment: [dev, qa, prod]  # Sequential execution of environments
 
     steps:
-      # Step 1: Checkout the repository
+      # Step 1: Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -28,29 +28,30 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           subscription-id: ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: true
 
-      # Step 3: Set up Terraform
+      # Step 3: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
-      # Step 4: Terraform Init
+      # Step 4: Terraform Init (Initialize)
       - name: Terraform Init
         run: terraform init
         working-directory: ${{ matrix.environment }}
 
-      # Step 5: Terraform Validate
+      # Step 5: Terraform Validate (Check configuration)
       - name: Terraform Validate
         run: terraform validate
         working-directory: ${{ matrix.environment }}
 
-      # Step 6: Terraform Plan
+      # Step 6: Terraform Plan (Show changes)
       - name: Terraform Plan
         run: terraform plan -var-file=terraform.tfvars
         working-directory: ${{ matrix.environment }}
 
-      # Step 7: Terraform Apply (Only for QA and PROD)
+      # Step 7: Terraform Apply (Only for QA and PROD environments)
       - name: Terraform Apply (Only for QA and PROD)
         if: matrix.environment != 'dev'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
