@@ -50,14 +50,38 @@ jobs:
       with:
         terraform_version: 1.0.0
 
-    # Step 6: Terraform Init
-    - name: Terraform Init
-      run: terraform init
+    # Step 6: Terraform Init for dev
+    - name: Terraform Init - dev
+      run: terraform init -backend-config="environment=dev"
 
-    # Step 7: Terraform Plan
-    - name: Terraform Plan
-      run: terraform plan -out=tfplan.binary
+    # Step 7: Terraform Plan for dev
+    - name: Terraform Plan - dev
+      run: terraform plan -out=tfplan-dev.binary -var="environment=dev"
 
-    # Step 8: Terraform Apply
-    - name: Terraform Apply
-      run: terraform apply -auto-approve -input=false
+    # Step 8: Terraform Apply for dev
+    - name: Terraform Apply - dev
+      run: terraform apply -auto-approve -input=false tfplan-dev.binary
+
+    # Step 9: Terraform Init for qa
+    - name: Terraform Init - qa
+      run: terraform init -backend-config="environment=qa"
+
+    # Step 10: Terraform Plan for qa
+    - name: Terraform Plan - qa
+      run: terraform plan -out=tfplan-qa.binary -var="environment=qa"
+
+    # Step 11: Terraform Apply for qa
+    - name: Terraform Apply - qa
+      run: terraform apply -auto-approve -input=false tfplan-qa.binary
+
+    # Step 12: Terraform Init for prod
+    - name: Terraform Init - prod
+      run: terraform init -backend-config="environment=prod"
+
+    # Step 13: Terraform Plan for prod
+    - name: Terraform Plan - prod
+      run: terraform plan -out=tfplan-prod.binary -var="environment=prod"
+
+    # Step 14: Terraform Apply for prod
+    - name: Terraform Apply - prod
+      run: terraform apply -auto-approve -input=false tfplan-prod.binary
