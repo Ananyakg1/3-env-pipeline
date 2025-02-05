@@ -1,60 +1,63 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Terraform Deployment
+name: 'Terraform'
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   terraform:
-    runs-on: ubuntu-22.04
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    environment: production
 
-    strategy:
-      matrix:
-        environment: [dev, qa, prod]
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+    # Step 1: Checkout the repository
+    - name: Checkout the repository
+      uses: actions/checkout@v4
 
-      - name: Create Environment Directories
-        run: mkdir -p ${{ matrix.environment }}
+    # Step 2: Check Azure CLI Version
+    - name: Check Azure CLI Version
+      run: |
+        az --version
 
-      - name: Clear Azure CLI Config
-        run: |
-           az account clear
-           az logout
+    # Step 3: Log in to Azure using Service Principal
+    - name: Log in to Azure
+      run: |
+        az login --service-principal \
+          -u ${{ secrets.AZURE_CLIENT_ID }} \
+          -p ${{ secrets.AZURE_CLIENT_SECRET }} \
+          --tenant ${{ secrets.AZURE_TENANT_ID }}
+        az account set --subscription ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}
 
+    # Step 4: Debug Azure Login Status
+    - name: Verify Azure Login
+      run: |
+        az account show
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+    # Step 5: Set up Terraform
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.0.0
 
-          allow-no-subscriptions: true
+    # Step 6: Terraform Init
+    - name: Terraform Init
+      run: terraform init
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
+    # Step 7: Terraform Plan
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan.binary
 
-      - name: Terraform Init
-        run: terraform init
-        working-directory: ${{ matrix.environment }}
-
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ${{ matrix.environment }}
-
-      - name: Terraform Plan
-        run: terraform plan -var-file=terraform.tfvars
-        working-directory: ${{ matrix.environment }}
-
-      - name: Terraform Apply (Only for QA and PROD)
-        if: matrix.environment != 'dev'
-        run: terraform apply -auto-approve -var-file=terraform.tfvars
-        working-directory: ${{ matrix.environment }}
+    # Step 8: Terraform Apply
+    - name: Terraform Apply
+      run: terraform apply -auto-approve -input=false
