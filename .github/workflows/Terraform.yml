@@ -11,6 +11,9 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write  # Grant write permissions for id-token to allow login to Azure
+
     strategy:
       matrix:
         environment: [dev, qa, prod]  # Sequential execution of dev, qa, and prod environments
@@ -55,4 +58,3 @@ jobs:
         if: matrix.environment != 'dev'
         run: terraform apply -auto-approve -var-file=terraform.tfvars
         working-directory: ${{ matrix.environment }}
-
