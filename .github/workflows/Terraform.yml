@@ -2,7 +2,7 @@
 
 name: Terraform Deployment
 
-on:
+on: 
   push:
     branches:
       - main
