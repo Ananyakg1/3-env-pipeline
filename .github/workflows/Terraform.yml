@@ -5,54 +5,112 @@ name: Terraform Deployment
 on:
   push:
     branches:
-      - main  # Trigger the workflow on push to the main branch
+      - main
 
 jobs:
-  terraform:
+  terraform_dev:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        environment: [dev, qa, prod]  # Sequential execution of environments
-
     steps:
-      # Step 1: Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 2: Azure Login using Service Principal Credentials from GitHub Secrets
-      - name: Azure Login
+      - name: Azure Login (Dev)
         uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           subscription-id: ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}
-          allow-no-subscriptions: true
 
-      # Step 3: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
-      # Step 4: Terraform Init (Initialize)
-      - name: Terraform Init
+      - name: Terraform Init (Dev)
         run: terraform init
-        working-directory: ${{ matrix.environment }}
+        working-directory: ./dev
 
-      # Step 5: Terraform Validate (Check configuration)
-      - name: Terraform Validate
+      - name: Terraform Validate (Dev)
         run: terraform validate
-        working-directory: ${{ matrix.environment }}
+        working-directory: ./dev
 
-      # Step 6: Terraform Plan (Show changes)
-      - name: Terraform Plan
-        run: terraform plan -var-file=terraform.tfvars
-        working-directory: ${{ matrix.environment }}
+      - name: Terraform Plan (Dev)
+        run: terraform plan -var-file=dev/terraform.tfvars
+        working-directory: ./dev
 
-      # Step 7: Terraform Apply (Only for QA and PROD environments)
-      - name: Terraform Apply (Only for QA and PROD)
-        if: matrix.environment != 'dev'
-        run: terraform apply -auto-approve -var-file=terraform.tfvars
-        working-directory: ${{ matrix.environment }}
+      - name: Terraform Apply (Dev)
+        run: terraform apply -auto-approve -var-file=dev/terraform.tfvars
+        working-directory: ./dev
+
+  terraform_qa:
+    runs-on: ubuntu-latest
+    needs: [terraform_dev]  # Ensure QA runs after Dev (sequential execution)
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login (QA)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          subscription-id: ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init (QA)
+        run: terraform init
+        working-directory: ./qa
+
+      - name: Terraform Validate (QA)
+        run: terraform validate
+        working-directory: ./qa
+
+      - name: Terraform Plan (QA)
+        run: terraform plan -var-file=qa/terraform.tfvars
+        working-directory: ./qa
+
+      - name: Terraform Apply (QA)
+        run: terraform apply -auto-approve -var-file=qa/terraform.tfvars
+        working-directory: ./qa
+
+  terraform_prod:
+    runs-on: ubuntu-latest
+    needs: [terraform_dev, terraform_qa]  # Ensure Prod runs after both Dev and QA (sequential execution)
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login (Prod)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          subscription-id: ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init (Prod)
+        run: terraform init
+        working-directory: ./prod
+
+      - name: Terraform Validate (Prod)
+        run: terraform validate
+        working-directory: ./prod
+
+      - name: Terraform Plan (Prod)
+        run: terraform plan -var-file=prod/terraform.tfvars
+        working-directory: ./prod
+
+      - name: Terraform Apply (Prod)
+        run: terraform apply -auto-approve -var-file=prod/terraform.tfvars
+        working-directory: ./prod
