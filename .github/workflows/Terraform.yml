@@ -21,6 +21,7 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_AD_SECRETS }}
+          allow-no-subscriptions: true
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
