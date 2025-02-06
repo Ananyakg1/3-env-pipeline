@@ -1,11 +1,11 @@
 output "resource_group_name" {
-  value = "dem-resource-group1-dev"
+  value = azurerm_resource_group.rg.name
 }
 
 output "storage_account_name" {
-  value = "dem-storage-acc1-dev"
+  value = azurerm_storage_account.sa.name
 }
 
 output "container_name" {
-  value = "dem-container1-dev"
+  value = azurerm_storage_container.container.name
 }
