@@ -82,15 +82,24 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
 
+    # Navigate to respective environment directory and execute Terraform commands
     - name: Terraform Init
-      run: terraform init
+      run: |
+        cd ${{ matrix.env }}
+        terraform init
 
     - name: Terraform Validate
-      run: terraform validate
+      run: |
+        cd ${{ matrix.env }}
+        terraform validate
 
     - name: Terraform Plan
-      run: terraform plan -var-file="terraform.tfvars" -input=false
+      run: |
+        cd ${{ matrix.env }}
+        terraform plan -var-file="terraform.tfvars" -input=false
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main'
-      run: terraform apply -var-file="terraform.tfvars" -auto-approve -input=false
+      run: |
+        cd ${{ matrix.env }}
+        terraform apply -var-file="terraform.tfvars" -auto-approve -input=false
