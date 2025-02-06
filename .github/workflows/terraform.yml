@@ -62,14 +62,17 @@ jobs:
       matrix:
         env: [dev, qa, prod]  # Runs for all environments in parallel
 
-    defaults:
-      run:
-        shell: bash
-        working-directory: ${{ matrix.env }}  # Change to respective environment directory
-
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+
+    # Ensure environment directory exists
+    - name: Verify Environment Directory
+      run: |
+        if [ ! -d "${{ matrix.env }}" ]; then
+          echo "❌ Error: Directory ${{ matrix.env }} does not exist!"
+          exit 1
+        fi
 
     # Set Terraform Environment Variables for Azure Authentication
     - name: Set Terraform Environment Variables
@@ -82,24 +85,19 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
 
-    # Navigate to respective environment directory and execute Terraform commands
     - name: Terraform Init
-      run: |
-        cd ${{ matrix.env }}
-        terraform init
+      working-directory: ${{ matrix.env }}
+      run: terraform init
 
     - name: Terraform Validate
-      run: |
-        cd ${{ matrix.env }}
-        terraform validate
+      working-directory: ${{ matrix.env }}
+      run: terraform validate
 
     - name: Terraform Plan
-      run: |
-        cd ${{ matrix.env }}
-        terraform plan -var-file="terraform.tfvars" -input=false
+      working-directory: ${{ matrix.env }}
+      run: terraform plan -var-file="terraform.tfvars" -input=false
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main'
-      run: |
-        cd ${{ matrix.env }}
-        terraform apply -var-file="terraform.tfvars" -auto-approve -input=false
+      working-directory: ${{ matrix.env }}
+      run: terraform apply -var-file="terraform.tfvars" -auto-approve -input=false
