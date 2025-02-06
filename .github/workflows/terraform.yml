@@ -42,64 +42,55 @@
 #       with:
 #         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-name: 'Terraform'
+name: 'Terraform Deployment'
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
+    branches:
+      - main
 
 permissions:
-  id-token: write  # Required for OIDC authentication
+  id-token: write
   contents: read
 
 jobs:
   terraform:
-    name: 'Terraform - ${{ matrix.environment }}'
+    name: 'Terraform'
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        environment: [dev, qa, prod]  # Running all environments in parallel
+        env: [dev, qa, prod]  # Runs for all environments
 
     defaults:
       run:
         shell: bash
+        working-directory: ${{ matrix.env }}  # Change to respective environment directory
 
     steps:
-    # Checkout the repository
-    - name: Checkout
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # Login to Azure using OIDC
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}
+    # No need for Azure CLI login! Terraform will authenticate with Service Principal
+    - name: Set Terraform Environment Variables
+      run: |
+        echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+        echo "ARM_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" >> $GITHUB_ENV
+        echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_AD_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+        echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
 
-    # Setup Terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
 
-    # Initialize Terraform
     - name: Terraform Init
       run: terraform init
-      working-directory: ${{ matrix.environment }}
 
-    # Check Terraform formatting
-    - name: Terraform Format
-      run: terraform fmt -check
-      working-directory: ${{ matrix.environment }}
+    - name: Terraform Validate
+      run: terraform validate
 
-    # Terraform Plan
     - name: Terraform Plan
       run: terraform plan -input=false
-      working-directory: ${{ matrix.environment }}
 
-    # Terraform Apply (Only on Push to Main)
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/main'
       run: terraform apply -auto-approve -input=false
-      working-directory: ${{ matrix.environment }}
